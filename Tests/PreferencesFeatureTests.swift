@@ -162,6 +162,12 @@ enum PreferencesFeatureTests {
                "valid Keep Awake mouse movement interval is preserved")
         suite.expect(Defaults.sanitizedKeepAwakeMouseJiggleInterval(3) == 5,
                "invalid Keep Awake mouse movement interval falls back to five minutes")
+        suite.expect(registeredDefaults[DefaultsKey.clamshellBatteryLimit] as? Int == 0,
+               "the closed-lid limit on battery is opt-in")
+        suite.expect(Defaults.sanitizedClamshellBatteryLimit(10) == 10,
+               "a valid closed-lid limit on battery is preserved")
+        suite.expect(Defaults.sanitizedClamshellBatteryLimit(7) == 0,
+               "an invalid closed-lid limit on battery falls back to never")
         suite.expect(Defaults.sanitizedKeepAwakeIconTint("pink") == .pink,
                "valid keep-awake active icon tint is preserved")
         suite.expect(Defaults.sanitizedKeepAwakeIconTint("bad") == .orange,
@@ -341,6 +347,29 @@ enum PreferencesFeatureTests {
         ), "the Keep Awake lock guard accepts the session dictionary's numeric bridge")
         suite.expect(!KeepAwakeAutomationSupport.isScreenLocked(sessionDictionary: nil),
                "an unreadable lock state does not strand Keep Awake in a pause")
+        let unplugged = Date(timeIntervalSinceReferenceDate: 1_000)
+        let later = unplugged.addingTimeInterval(120)
+        suite.expect(KeepAwakeAutomationSupport.lidClosedOnBatterySince(
+            previous: nil, lidClosed: true, onBattery: true, now: unplugged) == unplugged,
+               "the closed-lid clock starts when the lid is closed on battery")
+        suite.expect(KeepAwakeAutomationSupport.lidClosedOnBatterySince(
+            previous: unplugged, lidClosed: true, onBattery: true, now: later) == unplugged,
+               "the closed-lid clock keeps its start while the lid stays closed on battery")
+        suite.expect(KeepAwakeAutomationSupport.lidClosedOnBatterySince(
+            previous: unplugged, lidClosed: false, onBattery: true, now: later) == nil,
+               "opening the lid resets the closed-lid clock")
+        suite.expect(KeepAwakeAutomationSupport.lidClosedOnBatterySince(
+            previous: unplugged, lidClosed: true, onBattery: false, now: later) == nil,
+               "power coming back resets the closed-lid clock")
+        suite.expect(KeepAwakeAutomationSupport.clamshellBatteryDeadline(
+            since: unplugged, limitMinutes: 10) == unplugged.addingTimeInterval(600),
+               "a closed-lid limit on battery ends the session that many minutes after the clock starts")
+        suite.expect(KeepAwakeAutomationSupport.clamshellBatteryDeadline(
+            since: unplugged, limitMinutes: 0) == nil,
+               "no closed-lid limit on battery never ends the session")
+        suite.expect(KeepAwakeAutomationSupport.clamshellBatteryDeadline(
+            since: nil, limitMinutes: 10) == nil,
+               "a closed-lid limit does not run while the lid is open or on power")
         let cal = Calendar.current
         let now10 = cal.date(from: DateComponents(
             year: 2026, month: 1, day: 15, hour: 10, minute: 0))!
