@@ -55,6 +55,14 @@ enum KeepAwakeAutomationSupport {
         return since.addingTimeInterval(TimeInterval(limitMinutes) * 60)
     }
 
+    /// Whether an automatic session that lost its power keeps running: only
+    /// with a closed-lid limit, on battery, and until that limit runs out.
+    static func keepsSessionOnBattery(limitMinutes: Int, onBattery: Bool,
+                                      deadline: Date?, now: Date) -> Bool {
+        guard limitMinutes > 0, onBattery else { return false }
+        return deadline.map { $0 > now } ?? true
+    }
+
     static func isScreenLocked(sessionDictionary: [String: Any]?) -> Bool {
         guard let value = sessionDictionary?[screenLockedKey] else { return false }
         if let locked = value as? Bool { return locked }

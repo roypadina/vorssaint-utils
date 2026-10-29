@@ -370,6 +370,21 @@ enum PreferencesFeatureTests {
         suite.expect(KeepAwakeAutomationSupport.clamshellBatteryDeadline(
             since: nil, limitMinutes: 10) == nil,
                "a closed-lid limit does not run while the lid is open or on power")
+        suite.expect(KeepAwakeAutomationSupport.keepsSessionOnBattery(
+            limitMinutes: 10, onBattery: true, deadline: nil, now: later),
+               "an automatic session that lost its power keeps running on battery with the lid open")
+        suite.expect(KeepAwakeAutomationSupport.keepsSessionOnBattery(
+            limitMinutes: 10, onBattery: true, deadline: later.addingTimeInterval(60), now: later),
+               "an automatic session keeps running while the closed-lid limit has time left")
+        suite.expect(!KeepAwakeAutomationSupport.keepsSessionOnBattery(
+            limitMinutes: 10, onBattery: true, deadline: later, now: later),
+               "an automatic session ends once the closed-lid limit runs out")
+        suite.expect(!KeepAwakeAutomationSupport.keepsSessionOnBattery(
+            limitMinutes: 0, onBattery: true, deadline: nil, now: later),
+               "without a closed-lid limit, losing power still ends an automatic session")
+        suite.expect(!KeepAwakeAutomationSupport.keepsSessionOnBattery(
+            limitMinutes: 10, onBattery: false, deadline: nil, now: later),
+               "an automatic session is not held by the limit while on power")
         let cal = Calendar.current
         let now10 = cal.date(from: DateComponents(
             year: 2026, month: 1, day: 15, hour: 10, minute: 0))!
